@@ -21,11 +21,26 @@
 # Setup START --------------------
 # The following variables must be set before running the script
 
-# define the directory where -metadata.csv and -miRNAsTableRC.csv files are located
-input_data_path <- "testdata"
+# define the output directory of the miND tool, where the .csv files are located
+
+# Load needed libraries
+library(tidyverse) # tested with v1.3.1
+library(gridExtra) # tested with v2.3
+require(optparse)
+
+args <- commandArgs(trailingOnly = TRUE)
+
+parser <- OptionParser()
+parser <- add_option(parser, c("-m", "--mind-dir"), action="store", 
+                     dest = "mind_dir", default="testdata", help="The output directory of the miND tool.")
+parser <- add_option(parser, c("-o", "--out-dir"), action="store", 
+                     dest = "out_dir", default="output", help="The output directory of this tool.")
+opts <- parse_args(parser)
+
+input_data_path <- opts$mind_dir
 
 # set the path to the folder where generated output files should be stored
-output_path <- "output"
+output_path <- opts$out_dir
 
 # set spike in concentrations
 spikein_concentrations <- c(
@@ -40,9 +55,6 @@ spikein_concentrations <- c(
 
 # Setup END -----------------------
 
-# Load needed libraries
-library(tidyverse) # tested with v1.3.1
-library(gridExtra) # tested with v2.3
 
 # check if input_data_path exists and contains at least 1 set of files (metadata and RC)
 if (!dir.exists(input_data_path)) {
@@ -51,6 +63,9 @@ if (!dir.exists(input_data_path)) {
   input_data_folders <- list.dirs(path = input_data_path, recursive = FALSE, full.names = FALSE)
   for (i in 1:length(input_data_folders)) {
     input_dir <- input_data_folders[i]
+    if (input_dir == "logs") {
+        next;
+    }
     input_data_sample_miRNAs <- list.files(path = paste(input_data_path, input_dir, sep = "/"), pattern = paste0(input_dir, ".mirnas.csv"))
     input_data_sample_spikeins <- list.files(path = paste(input_data_path, input_dir, sep = "/"), pattern = paste0(input_dir, ".spikeins.txt"))
 
@@ -81,6 +96,9 @@ spikeins_stats <- tibble(
 # merge miRNA and miND spike-in counts into one CSV file
 for (i in 1:length(input_data_folders)) {
   input_dir <- input_data_folders[i]
+  if (input_dir == "logs") {
+      next;
+  }
   input_data_sample_miRNAs <- paste0(input_data_path, "/", input_dir, "/", input_dir, ".mirnas.csv")
   input_data_sample_spikeins <- paste0(input_data_path, "/", input_dir, "/", input_dir, ".spikeins.txt")
   outFile <- paste0(input_data_path, "/", input_dir, "/", input_dir, ".miRNAspikeIns.csv")
@@ -145,6 +163,7 @@ for (i in 1:length(input_data_folders)) {
 
   # calculate finale concentrations of spike ins in the sample
   spikein_concentrations <- spikein_concentrations * spikeInsVolume * amol / finalVolume
+
   sample_spikeins <- sample_spikeins %>% left_join(
     tibble(
       spikein = names(spikein_concentrations),
@@ -263,13 +282,15 @@ for (i in 1:length(input_data_folders)) {
 
 
     # generate plots and save them with the sample filename
-
+    # suppress creation of Rplots.pdf with pdf(NULL)
+    if(!interactive()) pdf(NULL)
+ 
     p1 <- ggplot(sample_spikeins, aes(rc, concentration)) +
       geom_point() +
       geom_line(aes(x = rc, y = fit), color = "blue", linetype = "dashed", linewidth = 0.2) +
       scale_x_log10(breaks = c(1e-2, 1e-1, 1e0, 1e1, 1e2, 1e3, 1e4, 1e5, 1e6, 1e7)) +
       scale_y_log10(breaks = c(1e-2, 1e-1, 1e0, 1e1, 1e2, 1e3, 1e4, 1e5, 1e6, 1e7)) +
-      annotation_logticks(size = 0.1) +
+      annotation_logticks(linewidth = 0.1) +
       labs(
         title = "Spike-in calibrator fit",
         subtitle = paste0("R-squared = ", round(rsq, 4)),
