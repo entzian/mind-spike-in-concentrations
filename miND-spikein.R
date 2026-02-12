@@ -44,13 +44,13 @@ output_path <- opts$out_dir
 
 # set spike in concentrations
 spikein_concentrations <- c(
-  "C" = 0.01,
-  "E" = 0.005,
-  "H" = 0.075,
-  "I" = 20,
-  "K" = 5,
-  "M" = 1.25,
-  "N" = 0.3125
+  "miND.01" = 20,
+  "miND.02" = 5,
+  "miND.03" = 1.25,
+  "miND.04" = 0.3125,
+  "miND.05" = 0.075,
+  "miND.06" = 0.01,
+  "miND.07" = 0.005
 )
 
 # Setup END -----------------------
@@ -161,8 +161,12 @@ for (i in 1:length(input_data_folders)) {
   finalVolume <- 9.5 # final volume of sample + spikeInsVolume uL of the spikeins
   spikeInsVolume <- 1
 
+  print(spikein_concentrations)
+
   # calculate finale concentrations of spike ins in the sample
   spikein_concentrations <- spikein_concentrations * spikeInsVolume * amol / finalVolume
+
+  print(sample_spikeins)
 
   sample_spikeins <- sample_spikeins %>% left_join(
     tibble(
